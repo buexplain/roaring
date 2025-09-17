@@ -1,0 +1,38 @@
+{
+  "name": "buexplain/roaring",
+  "description": "基于“https://github.com/RoaringBitmap/CRoaring”给php提供完善的bitmap操作能力",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "buexplain",
+      "email": "buexplain@qq.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.0"
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^2.14",
+    "phpunit/phpunit": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Roaring\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "RoaringTest\\": "tests/"
+    }
+  },
+  "scripts": {
+    "cs-fix": "php-cs-fixer fix ./src",
+    "test": "phpunit --configuration phpunit.xml --colors=always"
+  },
+  "repositories": {
+    "packagist": {
+      "type": "composer",
+      "url": "https://packagist.org"
+    }
+  }
+}

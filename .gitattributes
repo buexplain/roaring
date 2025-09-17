@@ -1,0 +1,4 @@
+.gitignore
+/tests export-ignore
+/src/CRoaring/src export-ignore
+phpunit.xml export-ignore
