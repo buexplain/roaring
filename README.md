@@ -5,5 +5,5 @@
 ## 编译`CRoaring`共享库
 
 ```bash
-gcc -O2 -g0 -s -fPIC -shared -o src/CRoaring/shared/library.dll src/CRoaring/src/library.c
+gcc -O2 -g0 -s -fPIC -shared -o src/CRoaring/shared/library32.dll src/CRoaring/src/library32.c
 ```
