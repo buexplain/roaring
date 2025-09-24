@@ -1,4 +1,5 @@
 .gitignore
 /tests export-ignore
 /src/CRoaring/src export-ignore
+/bin export-ignore
 phpunit.xml export-ignore

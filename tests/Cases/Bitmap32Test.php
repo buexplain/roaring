@@ -1,3 +1,4 @@
+<?php
 /**
  * Copyright 2025 buexplain@qq.com
  *
@@ -14,8 +15,22 @@
  * limitations under the License.
  */
 
-#include "roaring.c"
+declare(strict_types=1);
 
-void *bp32_create(void) {
-    return roaring_bitmap_create();
+namespace RoaringTest\Cases;
+
+use Roaring\Bitmap;
+use Roaring\Library;
+
+class Bitmap32Test extends BitmapTestAbstract
+{
+    function newBp(): Bitmap
+    {
+        return new Bitmap(Library::BIT_32);
+    }
+
+    function intMax(): int
+    {
+        return 4294967295;
+    }
 }

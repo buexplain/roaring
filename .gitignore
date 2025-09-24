@@ -1,5 +1,8 @@
 .*
 !.gitignore
 !.gitattributes
+src/CRoaring/src/main.c
+src/CRoaring/src/main.exe
 vendor
 .php_cs.cache
+src/CRoaring/src/cmake-build-debug

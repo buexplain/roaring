@@ -4,8 +4,11 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
          cacheDirectory=".phpunit.cache">
     <testsuites>
-        <testsuite name="Bp32 Tests">
-            <file>./tests/Cases/Bp32Test.php</file>
+        <testsuite name="Bitmap32Test Tests">
+            <file>./tests/Cases/Bitmap32Test.php</file>
+        </testsuite>
+        <testsuite name="Bitmap64Test Tests">
+            <file>./tests/Cases/Bitmap64Test.php</file>
         </testsuite>
     </testsuites>
     <source>

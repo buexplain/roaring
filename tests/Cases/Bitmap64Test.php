@@ -1,3 +1,4 @@
+<?php
 /**
  * Copyright 2025 buexplain@qq.com
  *
@@ -14,9 +15,23 @@
  * limitations under the License.
  */
 
-/**
- * Dynamically allocates a new bitmap (initially empty).
- * Returns NULL if the allocation fails.
- * Client is responsible for calling `roaring_bitmap_free()`.
- */
-void *bp32_create(void);
+declare(strict_types=1);
+
+namespace RoaringTest\Cases;
+
+use Roaring\Bitmap;
+use Roaring\Library;
+
+class Bitmap64Test extends BitmapTestAbstract
+{
+    function newBp(): Bitmap
+    {
+        return new Bitmap(Library::BIT_64);
+    }
+
+    function intMax(): int
+    {
+        //整型数 int 的字长和平台有关， PHP 不支持无符号的 int
+        return PHP_INT_MAX;
+    }
+}
