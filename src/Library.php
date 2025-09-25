@@ -89,17 +89,49 @@ class Library
         $this->bit = sprintf('bp%d_', $bit);
     }
 
+    /**
+     * 获取操作系统名称
+     * One of 'Windows', 'BSD', 'Darwin', 'Solaris', 'Linux' or 'Unknown'.
+     * Available as of PHP 7.2.0.
+     * @return string
+     */
+    protected static function getOS(): string
+    {
+        return strtolower(PHP_OS_FAMILY);
+    }
+
+    /**
+     * 获取cpu架构名称
+     * @return string
+     */
+    protected static function getArchitecture(): string
+    {
+        $arch = strtolower(php_uname('m'));
+        if (str_contains($arch, 'x86_64') || str_contains($arch, 'amd64')) {
+            $arch = 'x86_64';
+        } elseif (str_contains($arch, 'i386') || str_contains($arch, 'i686') || str_contains($arch, 'x86')) {
+            $arch = 'x86';
+        } elseif (str_contains($arch, 'arm64') || str_contains($arch, 'aarch64')) {
+            $arch = 'arm64';
+        } elseif (str_starts_with($arch, 'arm')) {
+            $arch = 'arm';
+        } else {
+            $arch = 'unknown';
+        }
+        return $arch;
+    }
+
     protected static function initFFI(): void
     {
         if (!is_null(self::$ffi)) {
             return;
         }
-        if (PHP_OS_FAMILY === 'Windows') {
-            $library = __DIR__ . '/CRoaring/shared/library.dll';
-        } else if (PHP_OS_FAMILY === 'Linux') {
-            $library = __DIR__ . '/CRoaring/shared/library.so';
-        } else {
-            throw new RuntimeException("Unsupported operating system: " . PHP_OS_FAMILY . ": " . PHP_OS);
+        $os = self::getOS();
+        $arch = self::getArchitecture();
+        $ext = $os === 'windows' ? 'dll' : 'so';
+        $library = __DIR__ . "/CRoaring/shared/library-$os-$arch.$ext";
+        if (!file_exists($library)) {
+            throw new RuntimeException("Library not found: $library");
         }
         $header = file_get_contents(__DIR__ . '/CRoaring/shared/library.h');
         self::$ffi = FFI::cdef($header, $library);

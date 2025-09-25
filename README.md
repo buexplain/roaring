@@ -83,3 +83,7 @@ vi /usr/local/bin/php8.2.10/etc/php.ini
 
 1. `No package 'libffi' found`，执行命令：`yum install libffi-devel`
 2. `错误：只允许在 C99 模式下使用‘for’循环初始化声明`，升级gcc
+
+## 特别感谢
+
+感谢[https://github.com/M31ayu](https://github.com/M31ayu)同学review代码。

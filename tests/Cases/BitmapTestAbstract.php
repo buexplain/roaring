@@ -92,6 +92,7 @@ abstract class BitmapTestAbstract extends TestCase
     public function testAddMany()
     {
         $b = $this->newBp();
+        $b->addMany([]);
         $b->addMany([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         $this->assertEquals(10, $b->getCardinality());
     }
@@ -137,6 +138,7 @@ abstract class BitmapTestAbstract extends TestCase
     public function testRemoveMany()
     {
         $b = $this->newBp();
+        $b->removeMany([]);
         $b->addRange(1, 5);
         $b->removeMany([1, 2, 3]);
         $this->assertEquals(1, $b->getCardinality());
@@ -323,7 +325,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->or($b)->toArray());
         $a->addMany([1, 2]);
+        $this->assertEquals($a->toArray(), $a->or('')->toArray());
+        $this->assertEquals($a->toArray(), $a->or($b)->toArray());
         $b->addMany([2, 3]);
         $c = $a->or($b);
         $this->assertEquals([1, 2, 3], $c->toArray());
@@ -337,7 +342,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->orInPlace($b)->toArray());
         $a->addMany([1, 2]);
+        $this->assertEquals([1, 2], $a->orInPlace('')->toArray());
+        $this->assertEquals([1, 2], $a->orInPlace($b)->toArray());
         $b->addMany([2, 3]);
         $a->orInPlace($b);
         $this->assertEquals([1, 2, 3], $a->toArray());
@@ -351,7 +359,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals(count([]), $a->orCardinality($b));
         $a->addMany([1, 2]);
+        $this->assertEquals(2, $a->orCardinality($b));
+        $this->assertEquals(2, $a->orCardinality(''));
         $b->addMany([2, 3]);
         $this->assertEquals(count([1, 2, 3]), $a->orCardinality($b));
     }
@@ -364,7 +375,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->xOr($b)->toArray());
         $a->addMany([1, 2, 3]);
+        $this->assertEquals([1, 2, 3], $a->xOr('')->toArray());
+        $this->assertEquals([1, 2, 3], $a->xOr($b)->toArray());
         $b->addMany([3, 4, 5]);
         $c = $a->xOr($b);
         $this->assertEquals([1, 2, 4, 5], $c->toArray());
@@ -378,7 +392,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->xOrInPlace($b)->toArray());
         $a->addMany([1, 2, 3]);
+        $this->assertEquals([1, 2, 3], $a->xOrInPlace('')->toArray());
+        $this->assertEquals([1, 2, 3], $a->xOrInPlace($b)->toArray());
         $b->addMany([3, 4, 5]);
         $a->xOrInPlace($b);
         $this->assertEquals([1, 2, 4, 5], $a->toArray());
@@ -392,7 +409,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals(count([]), $a->xOrCardinality($b));
         $a->addMany([1, 2, 3]);
+        $this->assertEquals(count([1, 2, 3]), $a->xOrCardinality(''));
+        $this->assertEquals(count([1, 2, 3]), $a->xOrCardinality($b));
         $b->addMany([3, 4, 5]);
         $this->assertEquals(count([1, 2, 4, 5]), $a->xOrCardinality($b));
     }
@@ -405,7 +425,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->and($b)->toArray());
         $a->addMany([1, 2, 3]);
+        $this->assertEquals([], $a->and('')->toArray());
+        $this->assertEquals([], $a->and($b)->toArray());
         $b->addMany([2, 3, 4]);
         $c = $a->and($b);
         $this->assertEquals([2, 3], $c->toArray());
@@ -419,6 +442,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->andInPlace($b)->toArray());
+        $a->addMany([1, 2, 3]);
+        $this->assertEquals([], $a->andInPlace('')->toArray());
+        $this->assertEquals([], $a->andInPlace($b)->toArray());
         $a->addMany([1, 2, 3]);
         $b->addMany([2, 3, 4]);
         $a->andInPlace($b);
@@ -433,7 +460,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals(0, $a->andCardinality($b));
         $a->addMany([1, 2, 3]);
+        $this->assertEquals(0, $a->andCardinality(''));
+        $this->assertEquals(0, $a->andCardinality($b));
         $b->addMany([2, 3, 4]);
         $this->assertEquals(count([2, 3]), $a->andCardinality($b));
     }
@@ -446,10 +476,12 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->andNot($b)->toArray());
         $a->addMany([1, 2, 3]);
+        $this->assertEquals($a->toArray(), $a->andNot('')->toArray());
+        $this->assertEquals($a->toArray(), $a->andNot($b)->toArray());
         $b->addMany([1, 3, 4]);
-        $c = $a->andNot($b);
-        $this->assertEquals([2], $c->toArray());
+        $this->assertEquals([2], $a->andNot($b)->toArray());
     }
 
     /**
@@ -460,7 +492,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals([], $a->andNotInPlace($b)->toArray());
         $a->addMany([1, 2, 3]);
+        $this->assertEquals($a->toArray(), $a->andNotInPlace('')->toArray());
+        $this->assertEquals($a->toArray(), $a->andNotInPlace($b)->toArray());
         $b->addMany([1, 3, 4]);
         $a->andNotInPlace($b);
         $this->assertEquals([2], $a->toArray());
@@ -474,7 +509,10 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertEquals(count([]), $a->andNotCardinality($b));
         $a->addMany([1, 2, 3]);
+        $this->assertEquals($a->getCardinality(), $a->andNotCardinality(''));
+        $this->assertEquals($a->getCardinality(), $a->andNotCardinality($b));
         $b->addMany([1, 3, 4]);
         $this->assertEquals(count([2]), $a->andNotCardinality($b));
     }
