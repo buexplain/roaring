@@ -83,6 +83,8 @@ abstract class BitmapTestAbstract extends TestCase
         $b = $this->newBp();
         $b->add(1);
         $this->assertEquals(1, $b->getCardinality());
+        $b->add(2, 3, 4, 5);
+        $this->assertEquals(5, $b->getCardinality());
     }
 
     /**

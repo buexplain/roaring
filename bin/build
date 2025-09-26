@@ -5,12 +5,16 @@ $srcDir = __DIR__ . "/../src";
 
 buildH($srcDir . "/CRoaring/src/library.c", $srcDir . "/CRoaring/shared/library.h");
 
+$os = strtolower(PHP_OS_FAMILY);
+$arch = getArchitecture();
+$ext = $os === 'windows' ? 'dll' : 'so';
+$library = "$srcDir/CRoaring/shared/library-$os-$arch.$ext" . 'aa';
 if (PHP_OS_FAMILY === 'Windows') {
-    //gcc -O2 -g0 -s -fPIC -shared -o src/CRoaring/shared/library.dll src/CRoaring/src/library.c
-    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $srcDir/CRoaring/shared/library.dll $srcDir/CRoaring/src/library.c");
+    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
 } else if (PHP_OS_FAMILY === 'Linux') {
-    //gcc -O2 -g0 -s -fPIC -shared -o /mnt/d/code/buexplain/roaring/src/CRoaring/shared/library.so /mnt/d/code/buexplain/roaring/src/CRoaring/src/library.c
-    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $srcDir/CRoaring/shared/library.so $srcDir/CRoaring/src/library.c");
+    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
+} else if (PHP_OS_FAMILY === 'Darwin') {
+    shell_exec("gcc -O2 -g0 -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
 }
 
 echo "ok\n";
@@ -53,4 +57,21 @@ function buildH(string $cFile, string $hFile): void
     }
     array_unshift($lines, '#include "stdint.h"');
     file_put_contents($hFile, implode("\n", $lines));
+}
+
+function getArchitecture(): string
+{
+    $arch = strtolower(php_uname('m'));
+    if (str_contains($arch, 'x86_64') || str_contains($arch, 'amd64')) {
+        $arch = 'x86_64';
+    } elseif (str_contains($arch, 'i386') || str_contains($arch, 'i686') || str_contains($arch, 'x86')) {
+        $arch = 'x86';
+    } elseif (str_contains($arch, 'arm64') || str_contains($arch, 'aarch64')) {
+        $arch = 'arm64';
+    } elseif (str_starts_with($arch, 'arm')) {
+        $arch = 'arm';
+    } else {
+        $arch = 'unknown';
+    }
+    return $arch;
 }

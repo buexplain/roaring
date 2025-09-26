@@ -86,4 +86,4 @@ vi /usr/local/bin/php8.2.10/etc/php.ini
 
 ## 特别感谢
 
-感谢[https://github.com/M31ayu](https://github.com/M31ayu)同学review代码。
+感谢[https://github.com/M31ayu](https://github.com/M31ayu)同学review代码、提供`darwin、arm64`的编译机器。

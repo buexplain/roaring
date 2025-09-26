@@ -121,10 +121,10 @@ class Library
         return $arch;
     }
 
-    protected static function initFFI(): void
+    public static function getFFI(): FFI
     {
         if (!is_null(self::$ffi)) {
-            return;
+            return self::$ffi;
         }
         $os = self::getOS();
         $arch = self::getArchitecture();
@@ -135,6 +135,7 @@ class Library
         }
         $header = file_get_contents(__DIR__ . '/CRoaring/shared/library.h');
         self::$ffi = FFI::cdef($header, $library);
+        return self::$ffi;
     }
 
     public static function getInstance(int $bit): Library
@@ -142,7 +143,7 @@ class Library
         if (isset(self::$instance[$bit])) {
             return self::$instance[$bit];
         }
-        self::initFFI();
+        self::getFFI();
         $obj = new self($bit);
         self::$instance[$bit] = $obj;
         return $obj;
