@@ -91,7 +91,7 @@ class Bitmap
      * 转为字节码
      * @return string
      */
-    public function toBytes(): string
+    final public function toBytes(): string
     {
         $size = Library::getInstance($this->bit)->portable_size_in_bytes($this->bitmap);
         $buf = Library::getFFI()->new("char[$size]");
@@ -144,6 +144,16 @@ class Bitmap
     }
 
     /**
+     * 创建一个指定长度的缓冲区
+     * @param int $size
+     * @return FFI\CData|null
+     */
+    protected function newBuff(int $size): ?FFI\CData
+    {
+        return Library::getFFI()->new(sprintf('uint%d_t[%d]', $this->bit, $size));
+    }
+
+    /**
      * 优化存储结构
      * @return bool
      */
@@ -164,14 +174,23 @@ class Bitmap
 
     /**
      * 添加单个值到位图
-     * @param int $x
-     * @param int ...$vals 更多的值
+     * @param int ...$x
      * @return $this
      */
-    public function add(int $x, int ...$vals): self
+    public function add(int ...$x): self
     {
-        Library::getInstance($this->bit)->add($this->bitmap, $x);
-        return $this->addMany($vals);
+        $card = count($x);
+        if ($card === 1) {
+            Library::getInstance($this->bit)->add($this->bitmap, $x[0]);
+            return $this;
+        }
+        $buff = $this->newBuff($card);
+        for ($i = 0; $i < $card; $i++) {
+            $buff[$i] = $x[$i];
+        }
+        $ptr = FFI::addr($buff[0]);
+        Library::getInstance($this->bit)->add_many($this->bitmap, $card, $ptr);
+        return $this;
     }
 
     /**
@@ -185,7 +204,7 @@ class Bitmap
         if ($card === 0) {
             return $this;
         }
-        $buff = Library::getFFI()->new(sprintf('uint%d_t[%d]', $this->bit, $card));
+        $buff = $this->newBuff($card);
         for ($i = 0; $i < $card; $i++) {
             $buff[$i] = $vals[$i];
         }
@@ -238,7 +257,7 @@ class Bitmap
         if ($card === 0) {
             return $this;
         }
-        $buff = Library::getFFI()->new(sprintf('uint%d_t[%d]', $this->bit, $card));
+        $buff = $this->newBuff($card);
         for ($i = 0; $i < $card; $i++) {
             $buff[$i] = $x[$i];
         }
@@ -670,7 +689,7 @@ class Bitmap
      */
     public function iterate(int $size = 100): Generator
     {
-        $buff = Library::getFFI()->new(sprintf('uint%d_t[%d]', $this->bit, $size));
+        $buff = $this->newBuff($size);
         $ptr = FFI::addr($buff[0]);
         try {
             $iterator = Library::getInstance($this->bit)->iterator_create($this->bitmap);
@@ -700,7 +719,7 @@ class Bitmap
         if ($card === 0) {
             return [];
         }
-        $buff = Library::getFFI()->new(sprintf('uint%d_t[%d]', $this->bit, $card));
+        $buff = $this->newBuff($card);
         $ptr = FFI::addr($buff[0]);
         Library::getInstance($this->bit)->to_uint_array($this->bitmap, $ptr);
         $ret = [];
