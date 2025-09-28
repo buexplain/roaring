@@ -24,6 +24,8 @@ use Roaring\Bitmap;
 
 abstract class BitmapTestAbstract extends TestCase
 {
+    abstract function bit(): int;
+
     abstract function newBp(): Bitmap;
 
     abstract function intMax(): int;
@@ -42,6 +44,26 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
+     * composer test -- --filter=testConstruct
+     * @return void
+     */
+    public function testConstruct(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $b = $this->newBp();
+            if ($i > 0) {
+                $min = $i * 10000;
+                $b->addRange($min, $min + 1000000);
+            }
+            $str1 = $b->toBytes();
+            $str2 = $b->toBase64();
+            $b1 = new Bitmap($this->bit(), $str1);
+            $b2 = new Bitmap($this->bit(), $str2);
+            $this->assertEquals(serialize($b1), serialize($b2));
+        }
+    }
+
+    /**
      * composer test -- --filter=testClone
      * @return void
      */
@@ -50,6 +72,17 @@ abstract class BitmapTestAbstract extends TestCase
         $b = $this->newBp();
         $b2 = clone $b;
         $this->assertEquals(serialize($b), serialize($b2));
+    }
+
+    /**
+     * composer test -- --filter=testToBase64
+     * @return void
+     */
+    public function testToBase64()
+    {
+        $b = $this->newBp();
+        $b->addRange(1, 1000670);
+        $this->assertEquals(base64_encode($b->toBytes()), $b->toBase64());
     }
 
     /**
@@ -286,6 +319,9 @@ abstract class BitmapTestAbstract extends TestCase
     {
         $a = $this->newBp();
         $b = $this->newBp();
+        $this->assertFalse($b->equals(''));
+        $this->assertTrue($b->equals($a->toBase64()));
+        $this->assertTrue($b->equals($a->toBytes()));
         $this->assertTrue($b->equals($a));
         $b->add(1);
         $this->assertFalse($a->equals($b));
@@ -300,10 +336,13 @@ abstract class BitmapTestAbstract extends TestCase
         $a = $this->newBp();
         $b = $this->newBp();
         $this->assertFalse($b->intersect($a));
+        $this->assertFalse($b->intersect($a->toBase64()));
+        $this->assertFalse($b->intersect($a->toBytes()));
+        $this->assertFalse($b->intersect(''));
         $a->addRange(1, 5);
-        $this->assertFalse($a->intersect($b));
+        $this->assertFalse($a->intersect($b->toBase64()));
         $b->addRange(2, 8);
-        $this->assertTrue($b->intersect($a));
+        $this->assertTrue($b->intersect($a->toBytes()));
         $this->assertTrue($a->intersect($b));
     }
 

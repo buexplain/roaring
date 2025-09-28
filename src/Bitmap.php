@@ -50,30 +50,54 @@ class Bitmap
      */
     protected object|null $bitmap = null;
 
+    protected Library|null $library = null;
+
     /**
      * 构造函数
      * @param int $bit 32 or 64
-     * @param string|null $bitmapBytes
+     * @param string|null $bitmapBytes 位图字节码 或者 位图字节码base64后的字符串 或者 null
      */
     final public function __construct(int $bit = Library::BIT_32, string|null $bitmapBytes = null)
     {
+        $this->library = Library::getInstance($bit);
         $this->bit = $bit;
         if ($bitmapBytes === null) {
-            $this->bitmap = Library::getInstance($this->bit)->create();
+            $this->bitmap = $this->library->create();
             if (is_null($this->bitmap)) {
                 throw new RuntimeException("bitmap create failed");
             }
         } else {
+            $bitmapBytes = self::base64Decode($bitmapBytes);
             $length = strlen($bitmapBytes);
             $buf = Library::getFFI()->new("char[" . ($length + 1) . "]");
             FFI::memcpy($buf, $bitmapBytes, $length);
             $buf[$length] = "\0";
             $ptr = FFI::addr($buf[0]);
-            $this->bitmap = Library::getInstance($this->bit)->portable_deserialize($ptr, $length);
+            $this->bitmap = $this->library->portable_deserialize($ptr, $length);
             if (is_null($this->bitmap)) {
                 throw new RuntimeException("bitmap portable_deserialize failed");
             }
         }
+    }
+
+    /**
+     * 尝试进行base64解码，如果不是base64编码则返回原字符串
+     * @param string $str
+     * @return string
+     */
+    protected static function base64Decode(string $str): string
+    {
+        if (strlen($str) % 4 !== 0) {
+            return $str;
+        }
+        if (!preg_match('/^[a-zA-Z0-9\/+=]*$/', $str)) {
+            return $str;
+        }
+        $ret = base64_decode($str, true);
+        if ($ret === false || $ret === '') {
+            return $str;
+        }
+        return $ret;
     }
 
     /**
@@ -82,9 +106,10 @@ class Bitmap
     final public function __destruct()
     {
         if ($this->bitmap) {
-            Library::getInstance($this->bit)->free($this->bitmap);
+            $this->library->free($this->bitmap);
             $this->bitmap = null;
         }
+        $this->library = null;
     }
 
     /**
@@ -93,11 +118,20 @@ class Bitmap
      */
     final public function toBytes(): string
     {
-        $size = Library::getInstance($this->bit)->portable_size_in_bytes($this->bitmap);
+        $size = $this->library->portable_size_in_bytes($this->bitmap);
         $buf = Library::getFFI()->new("char[$size]");
         $ptr = FFI::addr($buf[0]);
-        $size = Library::getInstance($this->bit)->portable_serialize($this->bitmap, $ptr);
+        $size = $this->library->portable_serialize($this->bitmap, $ptr);
         return FFI::string($buf, $size);
+    }
+
+    /**
+     * 转为base64
+     * @return string
+     */
+    public function toBase64(): string
+    {
+        return base64_encode($this->toBytes());
     }
 
     /**
@@ -108,7 +142,7 @@ class Bitmap
     {
         return [
             'bitmapBit' => $this->bit,
-            'bitmapBytes' => base64_encode($this->toBytes()),
+            'bitmapBytes' => $this->toBase64(),
         ];
     }
 
@@ -120,6 +154,7 @@ class Bitmap
     final public function __unserialize(array $data): void
     {
         $this->bit = $data['bitmapBit'];
+        $this->library = Library::getInstance($this->bit);
         if (isset($data['bitmapBytes'])) {
             $data['bitmapBytes'] = base64_decode($data['bitmapBytes']);
             $length = strlen($data['bitmapBytes']);
@@ -127,7 +162,7 @@ class Bitmap
             FFI::memcpy($buf, $data['bitmapBytes'], $length);
             $buf[$length] = "\0";
             $ptr = FFI::addr($buf[0]);
-            $this->bitmap = Library::getInstance($this->bit)->portable_deserialize($ptr, $length);
+            $this->bitmap = $this->library->portable_deserialize($ptr, $length);
             if (is_null($this->bitmap)) {
                 throw new RuntimeException("bitmap portable_deserialize failed");
             }
@@ -140,7 +175,7 @@ class Bitmap
      */
     final public function __clone()
     {
-        $this->bitmap = Library::getInstance($this->bit)->copy($this->bitmap);
+        $this->bitmap = $this->library->copy($this->bitmap);
     }
 
     /**
@@ -159,7 +194,7 @@ class Bitmap
      */
     public function runOptimize(): bool
     {
-        return Library::getInstance($this->bit)->run_optimize($this->bitmap);
+        return $this->library->run_optimize($this->bitmap);
     }
 
     /**
@@ -168,7 +203,7 @@ class Bitmap
      */
     public function clear(): self
     {
-        Library::getInstance($this->bit)->clear($this->bitmap);
+        $this->library->clear($this->bitmap);
         return $this;
     }
 
@@ -181,7 +216,7 @@ class Bitmap
     {
         $card = count($x);
         if ($card === 1) {
-            Library::getInstance($this->bit)->add($this->bitmap, $x[0]);
+            $this->library->add($this->bitmap, $x[0]);
             return $this;
         }
         $buff = $this->newBuff($card);
@@ -189,7 +224,7 @@ class Bitmap
             $buff[$i] = $x[$i];
         }
         $ptr = FFI::addr($buff[0]);
-        Library::getInstance($this->bit)->add_many($this->bitmap, $card, $ptr);
+        $this->library->add_many($this->bitmap, $card, $ptr);
         return $this;
     }
 
@@ -209,7 +244,7 @@ class Bitmap
             $buff[$i] = $vals[$i];
         }
         $ptr = FFI::addr($buff[0]);
-        Library::getInstance($this->bit)->add_many($this->bitmap, $card, $ptr);
+        $this->library->add_many($this->bitmap, $card, $ptr);
         return $this;
     }
 
@@ -220,7 +255,7 @@ class Bitmap
      */
     public function addChecked(int $x): bool
     {
-        return Library::getInstance($this->bit)->add_checked($this->bitmap, $x);
+        return $this->library->add_checked($this->bitmap, $x);
     }
 
     /**
@@ -231,7 +266,7 @@ class Bitmap
      */
     public function addRange(int $min, int $max): self
     {
-        Library::getInstance($this->bit)->add_range($this->bitmap, $min, $max);
+        $this->library->add_range($this->bitmap, $min, $max);
         return $this;
     }
 
@@ -242,7 +277,7 @@ class Bitmap
      */
     public function remove(int $x): self
     {
-        Library::getInstance($this->bit)->remove($this->bitmap, $x);
+        $this->library->remove($this->bitmap, $x);
         return $this;
     }
 
@@ -262,7 +297,7 @@ class Bitmap
             $buff[$i] = $x[$i];
         }
         $ptr = FFI::addr($buff[0]);
-        Library::getInstance($this->bit)->remove_many($this->bitmap, $card, $ptr);
+        $this->library->remove_many($this->bitmap, $card, $ptr);
         return $this;
     }
 
@@ -273,7 +308,7 @@ class Bitmap
      */
     public function removeChecked(int $x): bool
     {
-        return Library::getInstance($this->bit)->remove_checked($this->bitmap, $x);
+        return $this->library->remove_checked($this->bitmap, $x);
     }
 
     /**
@@ -284,7 +319,7 @@ class Bitmap
      */
     public function removeRange(int $min, int $max): self
     {
-        Library::getInstance($this->bit)->remove_range($this->bitmap, $min, $max);
+        $this->library->remove_range($this->bitmap, $min, $max);
         return $this;
     }
 
@@ -294,7 +329,7 @@ class Bitmap
      */
     public function getCardinality(): int
     {
-        return Library::getInstance($this->bit)->get_cardinality($this->bitmap);
+        return $this->library->get_cardinality($this->bitmap);
     }
 
     /**
@@ -305,7 +340,7 @@ class Bitmap
      */
     public function rangeCardinality(int $range_start, int $range_end): int
     {
-        return Library::getInstance($this->bit)->range_cardinality($this->bitmap, $range_start, $range_end);
+        return $this->library->range_cardinality($this->bitmap, $range_start, $range_end);
     }
 
     /**
@@ -315,7 +350,7 @@ class Bitmap
      */
     public function contains(int $val): bool
     {
-        return Library::getInstance($this->bit)->contains($this->bitmap, $val);
+        return $this->library->contains($this->bitmap, $val);
     }
 
     /**
@@ -326,7 +361,7 @@ class Bitmap
      */
     public function containsRange(int $range_start, int $range_end): bool
     {
-        return Library::getInstance($this->bit)->contains_range($this->bitmap, $range_start, $range_end);
+        return $this->library->contains_range($this->bitmap, $range_start, $range_end);
     }
 
     /**
@@ -336,7 +371,7 @@ class Bitmap
      */
     public function rank(int $x): int
     {
-        return Library::getInstance($this->bit)->rank($this->bitmap, $x);
+        return $this->library->rank($this->bitmap, $x);
     }
 
     /**
@@ -348,7 +383,7 @@ class Bitmap
     {
         $val = Library::getFFI()->new(sprintf('uint%d_t', $this->bit));
         $ptr = FFI::addr($val);
-        $ok = Library::getInstance($this->bit)->select($this->bitmap, $rank, $ptr);
+        $ok = $this->library->select($this->bitmap, $rank, $ptr);
         if ($ok) {
             return $val->cdata;
         }
@@ -364,10 +399,10 @@ class Bitmap
     public function minimum(): int
     {
         if ($this->bit === Library::BIT_32) {
-            return Library::getInstance($this->bit)->minimum($this->bitmap);
+            return $this->library->minimum($this->bitmap);
         }
         //整型数 int 的字长和平台有关， PHP 不支持无符号的 int， 所以当bitmap为空时，只能用 PHP_INT_MAX
-        return Library::getInstance($this->bit)->is_empty($this->bitmap) ? PHP_INT_MAX : Library::getInstance($this->bit)->minimum($this->bitmap);
+        return $this->library->is_empty($this->bitmap) ? PHP_INT_MAX : $this->library->minimum($this->bitmap);
     }
 
     /**
@@ -376,33 +411,47 @@ class Bitmap
      */
     public function maximum(): int
     {
-        return Library::getInstance($this->bit)->maximum($this->bitmap);
+        return $this->library->maximum($this->bitmap);
     }
 
     /**
      * 比较两个位图是否包含相同元素
-     * @param Bitmap $bitmap
+     * @param Bitmap|string $bitmap
      * @return bool
      */
-    public function equals(Bitmap $bitmap): bool
+    public function equals(Bitmap|string $bitmap): bool
     {
-        if ($this->bit !== $bitmap->bit) {
-            throw new RuntimeException("bitmap bit not equal");
+        if (is_string($bitmap)) {
+            if ($bitmap === '') {
+                return false;
+            }
+            $bitmap = new self($this->bit, $bitmap);
+        } else {
+            if ($this->bit !== $bitmap->bit) {
+                throw new RuntimeException("bitmap bit not equal");
+            }
         }
-        return Library::getInstance($this->bit)->equals($this->bitmap, $bitmap->bitmap);
+        return $this->library->equals($this->bitmap, $bitmap->bitmap);
     }
 
     /**
      * 检查两个位图是否有交集
-     * @param Bitmap $bitmap
+     * @param Bitmap|string $bitmap
      * @return bool
      */
-    public function intersect(Bitmap $bitmap): bool
+    public function intersect(Bitmap|string $bitmap): bool
     {
-        if ($this->bit !== $bitmap->bit) {
-            throw new RuntimeException("bitmap bit not equal");
+        if (is_string($bitmap)) {
+            if ($bitmap === '') {
+                return false;
+            }
+            $bitmap = new self($this->bit, $bitmap);
+        } else {
+            if ($this->bit !== $bitmap->bit) {
+                throw new RuntimeException("bitmap bit not equal");
+            }
         }
-        return Library::getInstance($this->bit)->intersect($this->bitmap, $bitmap->bitmap);
+        return $this->library->intersect($this->bitmap, $bitmap->bitmap);
     }
 
     /**
@@ -411,7 +460,7 @@ class Bitmap
      */
     public function isEmpty(): bool
     {
-        return Library::getInstance($this->bit)->is_empty($this->bitmap);
+        return $this->library->is_empty($this->bitmap);
     }
 
     /**
@@ -431,7 +480,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        $ptr = Library::getInstance($this->bit)->or($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->or($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -457,7 +506,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        Library::getInstance($this->bit)->or_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->or_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
     }
 
@@ -478,7 +527,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        return Library::getInstance($this->bit)->or_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->or_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
@@ -498,7 +547,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        $ptr = Library::getInstance($this->bit)->xor($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->xor($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -524,7 +573,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        Library::getInstance($this->bit)->xor_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->xor_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
     }
 
@@ -545,7 +594,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        return Library::getInstance($this->bit)->xor_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->xor_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
@@ -565,7 +614,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        $ptr = Library::getInstance($this->bit)->and($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->and($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -591,7 +640,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        Library::getInstance($this->bit)->and_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->and_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
     }
 
@@ -612,7 +661,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        return Library::getInstance($this->bit)->and_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->and_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
@@ -632,7 +681,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        $ptr = Library::getInstance($this->bit)->andnot($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->andnot($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -658,7 +707,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        Library::getInstance($this->bit)->andnot_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->andnot_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
     }
 
@@ -679,7 +728,7 @@ class Bitmap
                 throw new RuntimeException("bitmap bit not equal");
             }
         }
-        return Library::getInstance($this->bit)->andnot_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->andnot_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
@@ -692,11 +741,11 @@ class Bitmap
         $buff = $this->newBuff($size);
         $ptr = FFI::addr($buff[0]);
         try {
-            $iterator = Library::getInstance($this->bit)->iterator_create($this->bitmap);
+            $iterator = $this->library->iterator_create($this->bitmap);
             $card = $this->getCardinality();
             $read = 0;
             while ($read < $card) {
-                $length = Library::getInstance($this->bit)->iterator_read($iterator, $ptr, $size);
+                $length = $this->library->iterator_read($iterator, $ptr, $size);
                 $ret = [];
                 for ($i = 0; $i < $length; $i++) {
                     $ret[] = $buff[$i];
@@ -705,7 +754,7 @@ class Bitmap
                 yield $ret;
             }
         } finally {
-            !empty($iterator) && Library::getInstance($this->bit)->iterator_free($iterator);
+            !empty($iterator) && $this->library->iterator_free($iterator);
         }
     }
 
@@ -721,7 +770,7 @@ class Bitmap
         }
         $buff = $this->newBuff($card);
         $ptr = FFI::addr($buff[0]);
-        Library::getInstance($this->bit)->to_uint_array($this->bitmap, $ptr);
+        $this->library->to_uint_array($this->bitmap, $ptr);
         $ret = [];
         for ($i = 0; $i < $card; $i++) {
             $ret[] = $buff[$i];

@@ -24,12 +24,17 @@ use Roaring\Library;
 
 class Bitmap32Test extends BitmapTestAbstract
 {
-    function newBp(): Bitmap
+    public function bit(): int
+    {
+        return Library::BIT_32;
+    }
+
+    public function newBp(): Bitmap
     {
         return new Bitmap(Library::BIT_32);
     }
 
-    function intMax(): int
+    public function intMax(): int
     {
         return 4294967295;
     }

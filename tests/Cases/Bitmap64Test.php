@@ -24,12 +24,17 @@ use Roaring\Library;
 
 class Bitmap64Test extends BitmapTestAbstract
 {
-    function newBp(): Bitmap
+    public function bit(): int
+    {
+        return Library::BIT_64;
+    }
+
+    public function newBp(): Bitmap
     {
         return new Bitmap(Library::BIT_64);
     }
 
-    function intMax(): int
+    public function intMax(): int
     {
         //整型数 int 的字长和平台有关， PHP 不支持无符号的 int
         return PHP_INT_MAX;
