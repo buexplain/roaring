@@ -53,11 +53,10 @@ class Bitmap
     protected Library|null $library = null;
 
     /**
-     * 构造函数
-     * @param int $bit 32 or 64
      * @param string|null $bitmapBytes 位图字节码 或者 位图字节码base64后的字符串 或者 null
+     * @param int $bit 32 or 64
      */
-    final public function __construct(int $bit = Library::BIT_32, string|null $bitmapBytes = null)
+    final public function __construct(string|null $bitmapBytes = null, int $bit = Library::BIT_32)
     {
         $this->library = Library::getInstance($bit);
         $this->bit = $bit;
@@ -425,7 +424,7 @@ class Bitmap
             if ($bitmap === '') {
                 return false;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -445,7 +444,7 @@ class Bitmap
             if ($bitmap === '') {
                 return false;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -474,7 +473,7 @@ class Bitmap
             if ($bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -500,7 +499,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -521,7 +520,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -541,7 +540,7 @@ class Bitmap
             if ($bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -567,7 +566,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -588,7 +587,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -606,9 +605,9 @@ class Bitmap
     {
         if (is_string($bitmap)) {
             if ($bitmap === '') {
-                return new self($this->bit);
+                return new self(null, $this->bit);
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -634,7 +633,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this->clear();
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -655,7 +654,7 @@ class Bitmap
             if ($bitmap === '') {
                 return 0;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -675,7 +674,7 @@ class Bitmap
             if ($bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -701,7 +700,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
@@ -722,7 +721,7 @@ class Bitmap
             if ($bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($this->bit, $bitmap);
+            $bitmap = new self($bitmap, $this->bit);
         } else {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");

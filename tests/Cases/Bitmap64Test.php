@@ -31,7 +31,7 @@ class Bitmap64Test extends BitmapTestAbstract
 
     public function newBp(): Bitmap
     {
-        return new Bitmap(Library::BIT_64);
+        return new Bitmap(null, Library::BIT_64);
     }
 
     public function intMax(): int

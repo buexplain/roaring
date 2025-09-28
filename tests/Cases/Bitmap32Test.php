@@ -31,7 +31,7 @@ class Bitmap32Test extends BitmapTestAbstract
 
     public function newBp(): Bitmap
     {
-        return new Bitmap(Library::BIT_32);
+        return new Bitmap(null, Library::BIT_32);
     }
 
     public function intMax(): int

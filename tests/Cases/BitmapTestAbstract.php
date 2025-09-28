@@ -57,8 +57,8 @@ abstract class BitmapTestAbstract extends TestCase
             }
             $str1 = $b->toBytes();
             $str2 = $b->toBase64();
-            $b1 = new Bitmap($this->bit(), $str1);
-            $b2 = new Bitmap($this->bit(), $str2);
+            $b1 = new Bitmap($str1, $this->bit());
+            $b2 = new Bitmap($str2, $this->bit());
             $this->assertEquals(serialize($b1), serialize($b2));
         }
     }
