@@ -87,7 +87,7 @@ class Bitmap
     protected static function tryBase64Decode(string $str): string
     {
         // 检查字符串长度是否为4的倍数，且符合base64格式规范（包含可能的填充字符=）
-        if (strlen($str) % 4 !== 0 || preg_match('/^[A-Za-z0-9+\/]*={0,2}$/', $str) === false) {
+        if (strlen($str) % 4 !== 0 || !preg_match('/^[A-Za-z0-9+\/]*={0,2}$/', $str)) {
             return $str;
         }
         // 尝试进行base64解码，第二个参数true表示严格模式
