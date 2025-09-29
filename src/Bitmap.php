@@ -53,23 +53,23 @@ class Bitmap
     protected Library|null $library = null;
 
     /**
-     * @param string|null $bitmapBytes 位图字节码 或者 位图字节码base64后的字符串 或者 null
+     * @param string|null $bitmap 位图字节码 或者 位图字节码base64后的字符串 或者 null 或者 空字符串
      * @param int $bit 32 or 64
      */
-    final public function __construct(string|null $bitmapBytes = null, int $bit = Library::BIT_32)
+    final public function __construct(string|null $bitmap = null, int $bit = Library::BIT_32)
     {
         $this->library = Library::getInstance($bit);
         $this->bit = $bit;
-        if ($bitmapBytes === null) {
+        if ($bitmap === null || $bitmap === '') {
             $this->bitmap = $this->library->create();
             if (is_null($this->bitmap)) {
                 throw new RuntimeException("bitmap create failed");
             }
         } else {
-            $bitmapBytes = self::base64Decode($bitmapBytes);
-            $length = strlen($bitmapBytes);
+            $bitmap = self::tryBase64Decode($bitmap);
+            $length = strlen($bitmap);
             $buf = Library::getFFI()->new("char[" . ($length + 1) . "]");
-            FFI::memcpy($buf, $bitmapBytes, $length);
+            FFI::memcpy($buf, $bitmap, $length);
             $buf[$length] = "\0";
             $ptr = FFI::addr($buf[0]);
             $this->bitmap = $this->library->portable_deserialize($ptr, $length);
@@ -84,18 +84,19 @@ class Bitmap
      * @param string $str
      * @return string
      */
-    protected static function base64Decode(string $str): string
+    protected static function tryBase64Decode(string $str): string
     {
-        if (strlen($str) % 4 !== 0) {
+        // 检查字符串长度是否为4的倍数，且符合base64格式规范（包含可能的填充字符=）
+        if (strlen($str) % 4 !== 0 || preg_match('/^[A-Za-z0-9+\/]*={0,2}$/', $str) === false) {
             return $str;
         }
-        if (!preg_match('/^[a-zA-Z0-9\/+=]*$/', $str)) {
-            return $str;
-        }
+        // 尝试进行base64解码，第二个参数true表示严格模式
         $ret = base64_decode($str, true);
+        // 如果解码失败或解码后为空字符串，则返回原字符串
         if ($ret === false || $ret === '') {
             return $str;
         }
+        // 解码成功则返回解码后的内容
         return $ret;
     }
 
@@ -415,40 +416,40 @@ class Bitmap
 
     /**
      * 比较两个位图是否包含相同元素
-     * @param Bitmap|string $bitmap
+     * @param Bitmap|string|null $bitmap
      * @return bool
      */
-    public function equals(Bitmap|string $bitmap): bool
+    public function equals(Bitmap|string|null $bitmap): bool
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return false;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return false;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->equals($this->bitmap, $bitmap->bitmap);
     }
 
     /**
      * 检查两个位图是否有交集
-     * @param Bitmap|string $bitmap
+     * @param Bitmap|string|null $bitmap
      * @return bool
      */
-    public function intersect(Bitmap|string $bitmap): bool
+    public function intersect(Bitmap|string|null $bitmap): bool
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return false;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return false;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->intersect($this->bitmap, $bitmap->bitmap);
     }
@@ -464,20 +465,20 @@ class Bitmap
 
     /**
      * 计算两个位图的并集，返回新位图
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function or(Bitmap|string $bitmap): Bitmap
+    public function or(Bitmap|string|null $bitmap): Bitmap
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return clone $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return clone $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $ptr = $this->library->or($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
@@ -489,21 +490,21 @@ class Bitmap
     }
 
     /**
-     * 原地计算并集，计算结果保存到this中
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * 原地计算两个位图并集，计算结果保存到this中
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function orInPlace(Bitmap|string $bitmap): self
+    public function orInPlace(Bitmap|string|null $bitmap): self
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->or_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
@@ -511,40 +512,40 @@ class Bitmap
 
     /**
      * 计算两个位图并集的元素总数
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function orCardinality(Bitmap|string $bitmap): int
+    public function orCardinality(Bitmap|string|null $bitmap): int
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this->getCardinality();
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this->getCardinality();
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->or_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
      * 计算两个位图的对称差集（异或），返回新位图
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function xOr(Bitmap|string $bitmap): Bitmap
+    public function xOr(Bitmap|string|null $bitmap): Bitmap
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return clone $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return clone $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $ptr = $this->library->xor($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
@@ -556,21 +557,21 @@ class Bitmap
     }
 
     /**
-     * 原地计算异或，计算结果保存到this中
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * 原地计算两个位图的对称差集（异或），计算结果保存到this中
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function xOrInPlace(Bitmap|string $bitmap): self
+    public function xOrInPlace(Bitmap|string|null $bitmap): self
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->xor_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
@@ -578,40 +579,40 @@ class Bitmap
 
     /**
      * 计算两个位图对称差集的元素总数
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function xOrCardinality(Bitmap|string $bitmap): int
+    public function xOrCardinality(Bitmap|string|null $bitmap): int
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this->getCardinality();
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this->getCardinality();
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->xor_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
      * 计算两个位图的交集，返回新位图
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function and(Bitmap|string $bitmap): Bitmap
+    public function and(Bitmap|string|null $bitmap): Bitmap
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return new self(null, $this->bit);
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return new self(null, $this->bit);
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $ptr = $this->library->and($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
@@ -623,21 +624,21 @@ class Bitmap
     }
 
     /**
-     * 原地计算交集，计算结果保存到this中
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * 原地计算两个位图的交集，计算结果保存到this中
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andInPlace(Bitmap|string $bitmap): self
+    public function andInPlace(Bitmap|string|null $bitmap): self
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this->clear();
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this->clear();
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->and_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
@@ -645,40 +646,40 @@ class Bitmap
 
     /**
      * 计算两个位图交集的元素总数
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function andCardinality(Bitmap|string $bitmap): int
+    public function andCardinality(Bitmap|string|null $bitmap): int
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return 0;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return 0;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->and_cardinality($this->bitmap, $bitmap->bitmap);
     }
 
     /**
      * 计算两个位图的差集，返回新位图
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andNot(Bitmap|string $bitmap): Bitmap
+    public function andNot(Bitmap|string|null $bitmap): Bitmap
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return clone $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return clone $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $ptr = $this->library->andnot($this->bitmap, $bitmap->bitmap);
         if (is_null($ptr)) {
@@ -690,21 +691,21 @@ class Bitmap
     }
 
     /**
-     * 原地计算差集，计算结果保存到this中
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * 原地计算两个位图的差集，计算结果保存到this中
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andNotInPlace(Bitmap|string $bitmap): self
+    public function andNotInPlace(Bitmap|string|null $bitmap): self
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this;
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this;
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->andnot_inplace($this->bitmap, $bitmap->bitmap);
         return $this;
@@ -712,20 +713,20 @@ class Bitmap
 
     /**
      * 计算两个位图差集的元素总数
-     * @param Bitmap|string $bitmap 位图对象或位图字节码
+     * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function andNotCardinality(Bitmap|string $bitmap): int
+    public function andNotCardinality(Bitmap|string|null $bitmap): int
     {
-        if (is_string($bitmap)) {
-            if ($bitmap === '') {
-                return $this->getCardinality();
-            }
-            $bitmap = new self($bitmap, $this->bit);
-        } else {
+        if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+        } else {
+            if ($bitmap === null || $bitmap === '') {
+                return $this->getCardinality();
+            }
+            $bitmap = new self($bitmap, $this->bit);
         }
         return $this->library->andnot_cardinality($this->bitmap, $bitmap->bitmap);
     }

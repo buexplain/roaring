@@ -54,17 +54,17 @@ use RuntimeException;
  * @method static bool  intersect(CData $r1, CData $r2)                  检查两个位图是否有交集。
  * @method static bool  is_empty(CData $r)                               检查位图是否为空（基数为零）。
  *
- * @method static CData or (CData $r1, CData $r2)                         计算两个位图的并集，返回新位图，失败时返回 NULL。
- * @method static void  or_inplace(CData $r1, CData $r2)                 原地计算并集，修改 r1。
+ * @method static CData or (CData $r1, CData $r2)                        计算两个位图的并集，返回新位图，失败时返回 NULL。
+ * @method static void  or_inplace(CData $r1, CData $r2)                 原地计算两个位图并集，修改 r1。
  * @method static int   or_cardinality(CData $r1, CData $r2)             计算两个位图并集的元素总数。
- * @method static CData xor (CData $r1, CData $r2)                        计算两个位图的对称差集（异或），返回新位图，失败时返回 NULL。
- * @method static void  xor_inplace(CData $r1, CData $r2)                原地计算异或，修改 r1。
+ * @method static CData xor (CData $r1, CData $r2)                       计算两个位图的对称差集（异或），返回新位图，失败时返回 NULL。
+ * @method static void  xor_inplace(CData $r1, CData $r2)                原地计算两个位图的对称差集（异或），修改 r1。
  * @method static int   xor_cardinality(CData $r1, CData $r2)            计算两个位图对称差集的元素总数。
  * @method static CData and (CData $r1, CData $r2)                        计算两个位图的交集，返回新位图，失败时返回 NULL。
- * @method static void  and_inplace(CData $r1, CData $r2)                原地计算交集，修改 r1。
+ * @method static void  and_inplace(CData $r1, CData $r2)                原地计算两个位图的交集，修改 r1。
  * @method static int   and_cardinality(CData $r1, CData $r2)            计算两个位图交集的元素总数。
  * @method static CData andnot(CData $r1, CData $r2)                     计算两个位图的差集（r1 - r2），返回新位图，失败时返回 NULL。
- * @method static void  andnot_inplace(CData $r1, CData $r2)             原地计算差集，修改 r1。
+ * @method static void  andnot_inplace(CData $r1, CData $r2)             原地计算两个位图的差集，修改 r1。
  * @method static int   andnot_cardinality(CData $r1, CData $r2)         计算两个位图差集的元素总数。
  *
  * @method static CData iterator_create(CData $r)                        创建迭代器对象，用于遍历位图中的值。
