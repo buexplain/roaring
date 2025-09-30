@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace Roaring;
 
 use FFI;
+use FFI\CData;
 use Generator;
 use RuntimeException;
 
@@ -46,17 +47,21 @@ class Bitmap
 
     /**
      * 指向底层bitmap对象的指针
-     * @var object|null
+     * @var CData|null
      */
-    protected object|null $bitmap = null;
+    protected ?CData $bitmap = null;
 
-    protected Library|null $library = null;
+    /**
+     * 底层bitmap库对象
+     * @var Library|null
+     */
+    protected ?Library $library = null;
 
     /**
      * @param string|null $bitmap 位图字节码 或者 位图字节码base64后的字符串 或者 null 或者 空字符串
      * @param int $bit 32 or 64
      */
-    final public function __construct(string|null $bitmap = null, int $bit = Library::BIT_32)
+    final public function __construct(string $bitmap = null, int $bit = Library::BIT_32)
     {
         $this->library = Library::getInstance($bit);
         $this->bit = $bit;
@@ -105,7 +110,7 @@ class Bitmap
      */
     final public function __destruct()
     {
-        if ($this->bitmap) {
+        if (is_object($this->bitmap)) {
             $this->library->free($this->bitmap);
             $this->bitmap = null;
         }
@@ -419,7 +424,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap
      * @return bool
      */
-    public function equals(Bitmap|string|null $bitmap): bool
+    public function equals($bitmap): bool
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -439,7 +444,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap
      * @return bool
      */
-    public function intersect(Bitmap|string|null $bitmap): bool
+    public function intersect($bitmap): bool
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -468,7 +473,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function or(Bitmap|string|null $bitmap): Bitmap
+    public function or($bitmap): Bitmap
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -494,7 +499,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function orInPlace(Bitmap|string|null $bitmap): self
+    public function orInPlace($bitmap): self
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -515,7 +520,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function orCardinality(Bitmap|string|null $bitmap): int
+    public function orCardinality($bitmap): int
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -535,7 +540,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function xOr(Bitmap|string|null $bitmap): Bitmap
+    public function xOr($bitmap): Bitmap
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -561,7 +566,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function xOrInPlace(Bitmap|string|null $bitmap): self
+    public function xOrInPlace($bitmap): self
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -582,7 +587,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function xOrCardinality(Bitmap|string|null $bitmap): int
+    public function xOrCardinality($bitmap): int
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -602,7 +607,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function and(Bitmap|string|null $bitmap): Bitmap
+    public function and($bitmap): Bitmap
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -628,7 +633,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andInPlace(Bitmap|string|null $bitmap): self
+    public function andInPlace($bitmap): self
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -649,7 +654,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function andCardinality(Bitmap|string|null $bitmap): int
+    public function andCardinality($bitmap): int
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -669,7 +674,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andNot(Bitmap|string|null $bitmap): Bitmap
+    public function andNot($bitmap): Bitmap
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -695,7 +700,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
      */
-    public function andNotInPlace(Bitmap|string|null $bitmap): self
+    public function andNotInPlace($bitmap): self
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -716,7 +721,7 @@ class Bitmap
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return int
      */
-    public function andNotCardinality(Bitmap|string|null $bitmap): int
+    public function andNotCardinality($bitmap): int
     {
         if (is_object($bitmap)) {
             if ($this->bit !== $bitmap->bit) {
@@ -754,7 +759,9 @@ class Bitmap
                 yield $ret;
             }
         } finally {
-            !empty($iterator) && $this->library->iterator_free($iterator);
+            if (isset($iterator) && is_object($iterator)) {
+                $this->library->iterator_free($iterator);
+            }
         }
     }
 

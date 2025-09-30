@@ -80,7 +80,7 @@ class Library
 {
     public const BIT_32 = 32;
     public const BIT_64 = 64;
-    protected static FFI|null $ffi = null;
+    protected static ?FFI $ffi = null;
     protected string $bit = '';
     protected static array $instance = [];
 
