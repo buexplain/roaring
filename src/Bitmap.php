@@ -245,8 +245,10 @@ class Bitmap
             return $this;
         }
         $buff = $this->newBuff($card);
-        for ($i = 0; $i < $card; $i++) {
-            $buff[$i] = $vals[$i];
+        $i = 0;
+        foreach ($vals as $val) {
+            $buff[$i] = $val;
+            ++$i;
         }
         $ptr = FFI::addr($buff[0]);
         $this->library->add_many($this->bitmap, $card, $ptr);
@@ -298,8 +300,10 @@ class Bitmap
             return $this;
         }
         $buff = $this->newBuff($card);
-        for ($i = 0; $i < $card; $i++) {
-            $buff[$i] = $x[$i];
+        $i = 0;
+        foreach ($x as $val) {
+            $buff[$i] = $val;
+            ++$i;
         }
         $ptr = FFI::addr($buff[0]);
         $this->library->remove_many($this->bitmap, $card, $ptr);
@@ -495,6 +499,20 @@ class Bitmap
     }
 
     /**
+     * 计算多个位图的并集，返回新位图
+     * @param Bitmap|string|null ...$bitmap
+     * @return Bitmap
+     */
+    public function orAny(...$bitmap): Bitmap
+    {
+        $ret = clone $this;
+        foreach ($bitmap as $item) {
+            $ret = $ret->orInPlace($item);
+        }
+        return $ret;
+    }
+
+    /**
      * 原地计算两个位图并集，计算结果保存到this中
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
@@ -512,6 +530,19 @@ class Bitmap
             $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->or_inplace($this->bitmap, $bitmap->bitmap);
+        return $this;
+    }
+
+    /**
+     * 原地计算多个位图并集，计算结果保存到this中
+     * @param ...$bitmap
+     * @return self
+     */
+    public function orAnyInPlace(...$bitmap): self
+    {
+        foreach ($bitmap as $item) {
+            $this->orInPlace($item);
+        }
         return $this;
     }
 
@@ -629,6 +660,21 @@ class Bitmap
     }
 
     /**
+     * 计算多个位图的交集，返回新位图
+     * @param Bitmap|string|null ...$bitmap
+     * @return Bitmap
+     */
+    public function andAny(...$bitmap): Bitmap
+    {
+        $ret = new self(null, $this->bit);
+        foreach ($bitmap as $item) {
+            //与每个位图进行交集，并将结果保存到ret中
+            $ret->orInPlace($this->and($item));
+        }
+        return $ret;
+    }
+
+    /**
      * 原地计算两个位图的交集，计算结果保存到this中
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
@@ -646,6 +692,22 @@ class Bitmap
             $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->and_inplace($this->bitmap, $bitmap->bitmap);
+        return $this;
+    }
+
+    /**
+     * 原地计算多个位图交集，计算结果保存到this中
+     * @param Bitmap|string|null ...$bitmap
+     * @return $this
+     */
+    public function andAnyInPlace(...$bitmap): self
+    {
+        //复制一份自己，然后清空，然后每个位图都与自己的副本求交集，并将交集结果保存到自己中
+        $self = clone $this;
+        $this->clear();
+        foreach ($bitmap as $item) {
+            $this->orInPlace($self->and($item));
+        }
         return $this;
     }
 
@@ -696,6 +758,21 @@ class Bitmap
     }
 
     /**
+     * 计算多个位图的差集，返回新位图
+     * @param Bitmap|string|null ...$bitmap
+     * @return $this
+     */
+    public function andNotAny(...$bitmap): Bitmap
+    {
+        $ret = clone $this;
+        foreach ($bitmap as $item) {
+            //与每个位图进行差集，并将结果保存到ret中
+            $ret->andNotInPlace($item);
+        }
+        return $ret;
+    }
+
+    /**
      * 原地计算两个位图的差集，计算结果保存到this中
      * @param Bitmap|string|null $bitmap 位图对象或位图字节码
      * @return Bitmap
@@ -713,6 +790,20 @@ class Bitmap
             $bitmap = new self($bitmap, $this->bit);
         }
         $this->library->andnot_inplace($this->bitmap, $bitmap->bitmap);
+        return $this;
+    }
+
+    /**
+     * 原地计算多个位图的差集，计算结果保存到this中
+     * @param Bitmap|string|null ...$bitmap
+     * @return $this
+     */
+    public function andNotAnyInPlace(...$bitmap): self
+    {
+        foreach ($bitmap as $item) {
+            //与每个位图进行差集
+            $this->andNotInPlace($item);
+        }
         return $this;
     }
 

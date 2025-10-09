@@ -376,6 +376,23 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
+     * composer test -- --filter=testOrAny
+     * @return void
+     */
+    public function testOrAny()
+    {
+        $a = $this->newBp();
+        $a->add(1);
+        $b = $this->newBp();
+        $b->add(2);
+        $c = $this->newBp();
+        $c->add(3);
+        $d = $a->orAny($b, $c);
+        $this->assertEquals([1], $a->toArray());
+        $this->assertEquals([1, 2, 3], $d->toArray());
+    }
+
+    /**
      * composer test -- --filter=testOrInPlace
      * @return void
      */
@@ -389,6 +406,22 @@ abstract class BitmapTestAbstract extends TestCase
         $this->assertEquals([1, 2], $a->orInPlace($b)->toArray());
         $b->addMany([2, 3]);
         $a->orInPlace($b);
+        $this->assertEquals([1, 2, 3], $a->toArray());
+    }
+
+    /**
+     * composer test -- --filter=orAnyInPlace
+     * @return void
+     */
+    public function testOrAnyInPlace()
+    {
+        $a = $this->newBp();
+        $a->add(1);
+        $b = $this->newBp();
+        $b->add(2);
+        $c = $this->newBp();
+        $c->add(3);
+        $a->orAnyInPlace($b, $c);
         $this->assertEquals([1, 2, 3], $a->toArray());
     }
 
@@ -478,6 +511,25 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
+     * composer test -- --filter=testAndAny
+     * @return void
+     */
+    public function testAndAny()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5, 6);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(3, 4, 11);
+        $d = $this->newBp();
+        $d->add(12);
+        $x = $a->andAny($b, $c, $d);
+        $this->assertEquals([1, 2, 3, 4, 5, 6], $a->toArray());
+        $this->assertEquals([1, 2, 3, 4], $x->toArray());
+    }
+
+    /**
      * composer test -- --filter=testAndInPlace
      * @return void
      */
@@ -493,6 +545,24 @@ abstract class BitmapTestAbstract extends TestCase
         $b->addMany([2, 3, 4]);
         $a->andInPlace($b);
         $this->assertEquals([2, 3], $a->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testAndAnyInPlace
+     * @return void
+     */
+    public function testAndAnyInPlace()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5, 6);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(3, 4, 11);
+        $d = $this->newBp();
+        $d->add(12);
+        $a->andAnyInPlace($b, $c, $d);
+        $this->assertEquals([1, 2, 3, 4], $a->toArray());
     }
 
     /**
@@ -529,6 +599,24 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
+     * composer test -- --filter=testAndNotAny
+     * @return void
+     */
+    public function testAndNotAny()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(4, 11);
+        $d = $a->andNotAny($b, $c);
+        $this->assertEquals([1, 2, 3, 4, 5], $a->toArray());
+        $this->assertEquals([3, 5], $d->toArray());
+    }
+
+
+    /**
      * composer test -- --filter=testAndNotInPlace
      * @return void
      */
@@ -543,6 +631,23 @@ abstract class BitmapTestAbstract extends TestCase
         $b->addMany([1, 3, 4]);
         $a->andNotInPlace($b);
         $this->assertEquals([2], $a->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testAndNotAnyInPlace
+     * @return void
+     */
+    public function testAndNotAnyInPlace()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(4, 11);
+        $d = $a->andNotAnyInPlace($b, $c);
+        $this->assertEquals(spl_object_id($a), spl_object_id($d));
+        $this->assertEquals([3, 5], $d->toArray());
     }
 
     /**
