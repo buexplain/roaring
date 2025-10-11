@@ -376,10 +376,10 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=testOrAny
+     * composer test -- --filter=testOrMany
      * @return void
      */
-    public function testOrAny()
+    public function testOrMany()
     {
         $a = $this->newBp();
         $a->add(1);
@@ -387,7 +387,7 @@ abstract class BitmapTestAbstract extends TestCase
         $b->add(2);
         $c = $this->newBp();
         $c->add(3);
-        $d = $a->orAny($b, $c);
+        $d = $a->orMany($b, $c);
         $this->assertEquals([1], $a->toArray());
         $this->assertEquals([1, 2, 3], $d->toArray());
     }
@@ -410,10 +410,10 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=orAnyInPlace
+     * composer test -- --filter=testOrManyInPlace
      * @return void
      */
-    public function testOrAnyInPlace()
+    public function testOrManyInPlace()
     {
         $a = $this->newBp();
         $a->add(1);
@@ -421,7 +421,7 @@ abstract class BitmapTestAbstract extends TestCase
         $b->add(2);
         $c = $this->newBp();
         $c->add(3);
-        $a->orAnyInPlace($b, $c);
+        $a->orManyInPlace($b, $c);
         $this->assertEquals([1, 2, 3], $a->toArray());
     }
 
@@ -511,10 +511,10 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=testAndAny
+     * composer test -- --filter=testUnionAndMany
      * @return void
      */
-    public function testAndAny()
+    public function testUnionAndMany()
     {
         $a = $this->newBp();
         $a->add(1, 2, 3, 4, 5, 6);
@@ -524,9 +524,26 @@ abstract class BitmapTestAbstract extends TestCase
         $c->add(3, 4, 11);
         $d = $this->newBp();
         $d->add(12);
-        $x = $a->andAny($b, $c, $d);
+        $x = $a->unionAndMany($b, $c, $d);
         $this->assertEquals([1, 2, 3, 4, 5, 6], $a->toArray());
         $this->assertEquals([1, 2, 3, 4], $x->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testIteratedAndMany
+     * @return void
+     */
+    public function testIteratedAndMany()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5, 6);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(2, 3, 4, 11);
+        $x = $a->iteratedAndMany($b, $c);
+        $this->assertEquals([1, 2, 3, 4, 5, 6], $a->toArray());
+        $this->assertEquals([2], $x->toArray());
     }
 
     /**
@@ -548,10 +565,10 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=testAndAnyInPlace
+     * composer test -- --filter=testUnionAndManyInPlace
      * @return void
      */
-    public function testAndAnyInPlace()
+    public function testUnionAndManyInPlace()
     {
         $a = $this->newBp();
         $a->add(1, 2, 3, 4, 5, 6);
@@ -561,8 +578,25 @@ abstract class BitmapTestAbstract extends TestCase
         $c->add(3, 4, 11);
         $d = $this->newBp();
         $d->add(12);
-        $a->andAnyInPlace($b, $c, $d);
+        $a->unionAndManyInPlace($b, $c, $d);
         $this->assertEquals([1, 2, 3, 4], $a->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testIteratedAndManyInPlace
+     * @return void
+     */
+    public function testIteratedAndManyInPlace()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3, 4, 5, 6);
+        $b = $this->newBp();
+        $b->add(1, 2, 10);
+        $c = $this->newBp();
+        $c->add(2, 3, 4, 11);
+        $x = $a->iteratedAndManyInPlace($b, $c);
+        $this->assertEquals([2], $a->toArray());
+        $this->assertEquals([2], $x->toArray());
     }
 
     /**
@@ -599,10 +633,27 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=testAndNotAny
+     * composer test -- --filter=testUnionAndNotMany
      * @return void
      */
-    public function testAndNotAny()
+    public function testUnionAndNotMany()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3);
+        $b = $this->newBp();
+        $b->add(1, 3, 4);
+        $c = $this->newBp();
+        $c->add(2, 3, 4);
+        $d = $a->unionAndNotMany($b, $c);
+        $this->assertEquals([1, 2, 3], $a->toArray());
+        $this->assertEquals([1, 2], $d->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testIteratedAndNotMany
+     * @return void
+     */
+    public function testIteratedAndNotMany()
     {
         $a = $this->newBp();
         $a->add(1, 2, 3, 4, 5);
@@ -610,7 +661,7 @@ abstract class BitmapTestAbstract extends TestCase
         $b->add(1, 2, 10);
         $c = $this->newBp();
         $c->add(4, 11);
-        $d = $a->andNotAny($b, $c);
+        $d = $a->iteratedAndNotMany($b, $c);
         $this->assertEquals([1, 2, 3, 4, 5], $a->toArray());
         $this->assertEquals([3, 5], $d->toArray());
     }
@@ -634,10 +685,27 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
-     * composer test -- --filter=testAndNotAnyInPlace
+     * composer test -- --filter=testUnionAndNotManyInPlace
      * @return void
      */
-    public function testAndNotAnyInPlace()
+    public function testUnionAndNotManyInPlace()
+    {
+        $a = $this->newBp();
+        $a->add(1, 2, 3);
+        $b = $this->newBp();
+        $b->add(1, 3, 4);
+        $c = $this->newBp();
+        $c->add(2, 3, 4);
+        $d = $a->unionAndNotManyInPlace($b, $c);
+        $this->assertEquals([1, 2], $a->toArray());
+        $this->assertEquals([1, 2], $d->toArray());
+    }
+
+    /**
+     * composer test -- --filter=testIteratedAndNotManyInPlace
+     * @return void
+     */
+    public function testIteratedAndNotManyInPlace()
     {
         $a = $this->newBp();
         $a->add(1, 2, 3, 4, 5);
@@ -645,7 +713,7 @@ abstract class BitmapTestAbstract extends TestCase
         $b->add(1, 2, 10);
         $c = $this->newBp();
         $c->add(4, 11);
-        $d = $a->andNotAnyInPlace($b, $c);
+        $d = $a->iteratedAndNotManyInPlace($b, $c);
         $this->assertEquals(spl_object_id($a), spl_object_id($d));
         $this->assertEquals([3, 5], $d->toArray());
     }
