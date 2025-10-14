@@ -50,6 +50,16 @@ class Bitmap
      * @var CData|null
      */
     protected ?CData $bitmap = null;
+    /**
+     * 临时位图对象
+     * @var CData|null
+     */
+    protected ?CData $temporaryBitmap = null;
+    /**
+     * 临时缓冲区对象
+     * @var CData|null
+     */
+    protected ?CData $temporaryBuff = null;
 
     /**
      * 底层bitmap库对象
@@ -72,15 +82,51 @@ class Bitmap
             }
         } else {
             $bitmap = self::tryBase64Decode($bitmap);
-            $length = strlen($bitmap);
-            $buf = Library::getFFI()->new("char[" . ($length + 1) . "]");
-            FFI::memcpy($buf, $bitmap, $length);
-            $buf[$length] = "\0";
-            $ptr = FFI::addr($buf[0]);
-            $this->bitmap = $this->library->portable_deserialize($ptr, $length);
-            if (is_null($this->bitmap)) {
-                throw new RuntimeException("bitmap portable_deserialize failed");
-            }
+            $bPtr = $this->library->create();
+            $this->portableDeserialize($bPtr, $bitmap);
+            $this->bitmap = $bPtr;
+        }
+    }
+
+    protected function getTemporaryBuff(int $length): CData
+    {
+        if (is_null($this->temporaryBuff)) {
+            $this->temporaryBuff = Library::getFFI()->new("char[" . ($length + 1) . "]");
+            return $this->temporaryBuff;
+        }
+        $size = FFI::sizeof($this->temporaryBuff);
+        if ($size < ($length + 1)) {
+            $this->temporaryBuff = Library::getFFI()->new("char[" . ((int)($length * 1.25) + 1) . "]");
+            return $this->temporaryBuff;
+        }
+        FFI::memset($this->temporaryBuff, 0, $length + 1);
+        return $this->temporaryBuff;
+    }
+
+    /**
+     * 获取临时位图对象
+     * @return CData
+     */
+    protected function getTemporaryBitmap(): CData
+    {
+        if ($this->temporaryBitmap === null) {
+            $this->temporaryBitmap = $this->library->create();
+        }
+        $this->library->clear($this->temporaryBitmap);
+        return $this->temporaryBitmap;
+    }
+
+    protected function portableDeserialize(CData $bPtr, string $bitmap)
+    {
+        $length = strlen($bitmap);
+        $buf = $this->getTemporaryBuff($length);
+        FFI::memcpy($buf, $bitmap, $length);
+        $buf[$length] = "\0";
+        $ptr = FFI::addr($buf[0]);
+        $ok = $this->library->portable_deserialize($bPtr, $ptr, $length);
+        if (!$ok) {
+            $this->library->free($bPtr);
+            throw new RuntimeException("bitmap portable_deserialize failed");
         }
     }
 
@@ -113,6 +159,13 @@ class Bitmap
         if (is_object($this->bitmap)) {
             $this->library->free($this->bitmap);
             $this->bitmap = null;
+        }
+        if (is_object($this->temporaryBitmap)) {
+            $this->library->free($this->temporaryBitmap);
+            $this->temporaryBitmap = null;
+        }
+        if (is_object($this->temporaryBuff)) {
+            $this->temporaryBuff = null;
         }
         $this->library = null;
     }
@@ -162,15 +215,9 @@ class Bitmap
         $this->library = Library::getInstance($this->bit);
         if (isset($data['bitmapBytes'])) {
             $data['bitmapBytes'] = base64_decode($data['bitmapBytes']);
-            $length = strlen($data['bitmapBytes']);
-            $buf = Library::getFFI()->new("char[" . ($length + 1) . "]");
-            FFI::memcpy($buf, $data['bitmapBytes'], $length);
-            $buf[$length] = "\0";
-            $ptr = FFI::addr($buf[0]);
-            $this->bitmap = $this->library->portable_deserialize($ptr, $length);
-            if (is_null($this->bitmap)) {
-                throw new RuntimeException("bitmap portable_deserialize failed");
-            }
+            $bPtr = $this->library->create();
+            $this->portableDeserialize($bPtr, $data['bitmapBytes']);
+            $this->bitmap = $bPtr;
         }
     }
 
@@ -203,7 +250,7 @@ class Bitmap
     }
 
     /**
-     * 清空位图内容，移除所有辅助分配
+     * 清空位图内容
      * @return $this
      */
     public function clear(): self
@@ -434,13 +481,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return false;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->equals($this->bitmap, $bitmap->bitmap);
+        return $this->library->equals($this->bitmap, $bPtr);
     }
 
     /**
@@ -454,13 +503,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return false;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->intersect($this->bitmap, $bitmap->bitmap);
+        return $this->library->intersect($this->bitmap, $bPtr);
     }
 
     /**
@@ -483,13 +534,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $ptr = $this->library->or($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->or($this->bitmap, $bPtr);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -523,13 +576,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $this->library->or_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->or_inplace($this->bitmap, $bPtr);
         return $this;
     }
 
@@ -557,13 +612,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->or_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->or_cardinality($this->bitmap, $bPtr);
     }
 
     /**
@@ -577,13 +634,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $ptr = $this->library->xor($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->xor($this->bitmap, $bPtr);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -603,13 +662,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $this->library->xor_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->xor_inplace($this->bitmap, $bPtr);
         return $this;
     }
 
@@ -624,13 +685,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->xor_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->xor_cardinality($this->bitmap, $bPtr);
     }
 
     /**
@@ -644,13 +707,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return new self(null, $this->bit);
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $ptr = $this->library->and($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->and($this->bitmap, $bPtr);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -704,13 +769,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this->clear();
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $this->library->and_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->and_inplace($this->bitmap, $bPtr);
         return $this;
     }
 
@@ -759,13 +826,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return 0;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->and_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->and_cardinality($this->bitmap, $bPtr);
     }
 
     /**
@@ -779,13 +848,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return clone $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $ptr = $this->library->andnot($this->bitmap, $bitmap->bitmap);
+        $ptr = $this->library->andnot($this->bitmap, $bPtr);
         if (is_null($ptr)) {
             throw new RuntimeException("bitmap or failed");
         }
@@ -841,13 +912,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this;
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        $this->library->andnot_inplace($this->bitmap, $bitmap->bitmap);
+        $this->library->andnot_inplace($this->bitmap, $bPtr);
         return $this;
     }
 
@@ -898,13 +971,15 @@ class Bitmap
             if ($this->bit !== $bitmap->bit) {
                 throw new RuntimeException("bitmap bit not equal");
             }
+            $bPtr = $bitmap->bitmap;
         } else {
             if ($bitmap === null || $bitmap === '') {
                 return $this->getCardinality();
             }
-            $bitmap = new self($bitmap, $this->bit);
+            $bPtr = $this->getTemporaryBitmap();
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
         }
-        return $this->library->andnot_cardinality($this->bitmap, $bitmap->bitmap);
+        return $this->library->andnot_cardinality($this->bitmap, $bPtr);
     }
 
     /**

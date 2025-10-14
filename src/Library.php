@@ -22,6 +22,7 @@ namespace Roaring;
 use FFI;
 use FFI\CData;
 use RuntimeException;
+use function strlen;
 
 /**
  * 静态类，封装了 C 语言库的调用。这里的所有注释是ai自动从library.h文件提取的 。
@@ -30,7 +31,7 @@ use RuntimeException;
  * @method static CData create()                                         创建一个新的空位图，失败时返回 NULL。
  * @method static CData copy(CData $r)                                   复制一个位图，失败时返回 NULL。
  * @method static bool  run_optimize(CData $r)                           优化存储结构（启用游程编码），至少有一个游程容器时返回 true。
- * @method static void  clear(CData $r)                                  清空位图内容，移除所有辅助分配。
+ * @method static void  clear(CData $r)                                  清空位图内容。
  * @method static void  free(CData $r)                                   释放位图内存。
  *
  * @method static void  add(CData $r, int $x)                            添加单个值到位图。
@@ -73,7 +74,7 @@ use RuntimeException;
  *
  * @method static int   portable_size_in_bytes(CData $r)                 获取序列化位图所需的字节数。
  * @method static int   portable_serialize(CData $r, CData $buf)         将位图序列化到缓冲区，返回写入的字节数。
- * @method static CData portable_deserialize(CData $buf, int $maxbytes)                 从缓冲区反序列化位图，失败时返回 NULL。
+ * @method static CData portable_deserialize(CData $r, CData $buf, int $maxbytes)                 从缓冲区反序列化位图，失败时返回 false。
  * @method static void  to_uint_array(CData $r, CData $ans)            将位图中所有元素导出为有序数组。
  */
 class Library
@@ -107,18 +108,28 @@ class Library
     protected static function getArchitecture(): string
     {
         $arch = strtolower(php_uname('m'));
-        if (str_contains($arch, 'x86_64') || str_contains($arch, 'amd64')) {
+        if (self::str_contains($arch, 'x86_64') || self::str_contains($arch, 'amd64')) {
             $arch = 'x86_64';
-        } elseif (str_contains($arch, 'i386') || str_contains($arch, 'i686') || str_contains($arch, 'x86')) {
+        } elseif (self::str_contains($arch, 'i386') || self::str_contains($arch, 'i686') || self::str_contains($arch, 'x86')) {
             $arch = 'x86';
-        } elseif (str_contains($arch, 'arm64') || str_contains($arch, 'aarch64')) {
+        } elseif (self::str_contains($arch, 'arm64') || self::str_contains($arch, 'aarch64')) {
             $arch = 'arm64';
-        } elseif (str_starts_with($arch, 'arm')) {
+        } elseif (self::str_starts_with($arch, 'arm')) {
             $arch = 'arm';
         } else {
             $arch = 'unknown';
         }
         return $arch;
+    }
+
+    protected static function str_contains(string $haystack, string $needle): bool
+    {
+        return '' === $needle || false !== strpos($haystack, $needle);
+    }
+
+    protected static function str_starts_with(string $haystack, string $needle): bool
+    {
+        return 0 === strncmp($haystack, $needle, strlen($needle));
     }
 
     public static function getFFI(): FFI

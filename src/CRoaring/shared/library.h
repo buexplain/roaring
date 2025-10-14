@@ -52,9 +52,7 @@ bool bp32_run_optimize(void *r);
  */
 bool bp64_run_optimize(void *r);
 /**
- * Empties the bitmap.  It will have no auxiliary allocations (so if the bitmap
- * was initialized in client memory via roaring_bitmap_init(), then a call to
- * roaring_bitmap_clear() would be enough to "free" it)
+ * Empties the bitmap.
  */
 void bp32_clear(void *r);
 /**
@@ -528,7 +526,7 @@ size_t bp64_portable_serialize(void *r, char *buf);
  *
  * The returned pointer may be NULL in case of errors.
  */
-void *bp32_portable_deserialize(char *buf, size_t maxbytes);
+bool bp32_portable_deserialize(void *r, char *buf, size_t maxbytes);
 /**
  * Read a bitmap from a serialized buffer (reading up to maxbytes).
  * In case of failure, NULL is returned.
@@ -562,7 +560,7 @@ void *bp32_portable_deserialize(char *buf, size_t maxbytes);
  * mainframe IBM s390x), the data format is going to be big-endian and not
  * compatible with little-endian systems.
  */
-void *bp64_portable_deserialize(char *buf, size_t maxbytes);
+bool bp64_portable_deserialize(void *ans, char *buf, size_t maxbytes);
 /**
  * Convert the bitmap to a sorted array, output in `ans`.
  *

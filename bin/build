@@ -61,14 +61,20 @@ function buildH(string $cFile, string $hFile): void
 
 function getArchitecture(): string
 {
+    $str_contains = function (string $haystack, string $needle): bool {
+        return '' === $needle || false !== strpos($haystack, $needle);
+    };
+    $str_starts_with = function (string $haystack, string $needle): bool {
+        return 0 === strncmp($haystack, $needle, strlen($needle));
+    };
     $arch = strtolower(php_uname('m'));
-    if (str_contains($arch, 'x86_64') || str_contains($arch, 'amd64')) {
+    if ($str_contains($arch, 'x86_64') || $str_contains($arch, 'amd64')) {
         $arch = 'x86_64';
-    } elseif (str_contains($arch, 'i386') || str_contains($arch, 'i686') || str_contains($arch, 'x86')) {
+    } elseif ($str_contains($arch, 'i386') || $str_contains($arch, 'i686') || $str_contains($arch, 'x86')) {
         $arch = 'x86';
-    } elseif (str_contains($arch, 'arm64') || str_contains($arch, 'aarch64')) {
+    } elseif ($str_contains($arch, 'arm64') || $str_contains($arch, 'aarch64')) {
         $arch = 'arm64';
-    } elseif (str_starts_with($arch, 'arm')) {
+    } elseif ($str_starts_with($arch, 'arm')) {
         $arch = 'arm';
     } else {
         $arch = 'unknown';

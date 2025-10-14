@@ -71,12 +71,13 @@ bool bp64_run_optimize(void *r) {
 }
 
 /**
- * Empties the bitmap.  It will have no auxiliary allocations (so if the bitmap
- * was initialized in client memory via roaring_bitmap_init(), then a call to
- * roaring_bitmap_clear() would be enough to "free" it)
+ * Empties the bitmap.
  */
 void bp32_clear(void *r) {
-    roaring_bitmap_clear((roaring_bitmap_t *) r);
+    roaring_bitmap_t *rb = (roaring_bitmap_t *) r;
+    roaring_array_t *ra = &rb->high_low_container;
+    ra_clear_containers(ra);
+    ra->size = 0;
 }
 
 /**
@@ -778,8 +779,21 @@ size_t bp64_portable_serialize(void *r, char *buf) {
  *
  * The returned pointer may be NULL in case of errors.
  */
-void *bp32_portable_deserialize(char *buf, size_t maxbytes) {
-    return roaring_bitmap_portable_deserialize_safe(buf, maxbytes);
+bool bp32_portable_deserialize(void *r, char *buf, size_t maxbytes) {
+//    return roaring_bitmap_portable_deserialize_safe(buf, maxbytes);
+    roaring_bitmap_t *ans = (roaring_bitmap_t *) r;
+    if (ans == NULL) {
+        return false;
+    }
+    size_t bytesread;
+    bool is_ok = ra_portable_deserialize(&ans->high_low_container, buf,
+                                         maxbytes, &bytesread);
+    if (!is_ok) {
+        roaring_free(ans);
+        return false;
+    }
+    roaring_bitmap_set_copy_on_write(ans, false);
+    return true;
 }
 
 /**
@@ -815,8 +829,90 @@ void *bp32_portable_deserialize(char *buf, size_t maxbytes) {
  * mainframe IBM s390x), the data format is going to be big-endian and not
  * compatible with little-endian systems.
  */
-void *bp64_portable_deserialize(char *buf, size_t maxbytes) {
-    return roaring64_bitmap_portable_deserialize_safe(buf, maxbytes);
+bool bp64_portable_deserialize(void *ans, char *buf, size_t maxbytes) {
+//    return roaring64_bitmap_portable_deserialize_safe(buf, maxbytes);
+    roaring64_bitmap_t *r = (roaring64_bitmap_t *) ans;
+    // https://github.com/RoaringBitmap/RoaringFormatSpec#extension-for-64-bit-implementations
+    if (buf == NULL) {
+        return false;
+    }
+    size_t read_bytes = 0;
+
+    // Read as uint64 the distinct number of "buckets", where a bucket is
+    // defined as the most significant 32 bits of an element.
+    uint64_t buckets;
+    if (read_bytes + sizeof(buckets) > maxbytes) {
+        return false;
+    }
+    memcpy(&buckets, buf, sizeof(buckets));
+    buf += sizeof(buckets);
+    read_bytes += sizeof(buckets);
+
+    // Buckets should be 32 bits with 4 bits of zero padding.
+    if (buckets > UINT32_MAX) {
+        return false;
+    }
+
+    // Iterate through buckets ordered by increasing keys.
+    int64_t previous_high32 = -1;
+    for (uint64_t bucket = 0; bucket < buckets; ++bucket) {
+        // Read as uint32 the most significant 32 bits of the bucket.
+        uint32_t high32;
+        if (read_bytes + sizeof(high32) > maxbytes) {
+            roaring64_bitmap_free(r);
+            return false;
+        }
+        memcpy(&high32, buf, sizeof(high32));
+        buf += sizeof(high32);
+        read_bytes += sizeof(high32);
+        // High 32 bits must be strictly increasing.
+        if (high32 <= previous_high32) {
+            roaring64_bitmap_free(r);
+            return false;
+        }
+        previous_high32 = high32;
+
+        // Read the 32-bit Roaring bitmaps representing the least
+        // significant bits of a set of elements.
+        size_t bitmap32_size = roaring_bitmap_portable_deserialize_size(
+                buf, maxbytes - read_bytes);
+        if (bitmap32_size == 0) {
+            roaring64_bitmap_free(r);
+            return false;
+        }
+
+        roaring_bitmap_t *bitmap32 = roaring_bitmap_portable_deserialize_safe(
+                buf, maxbytes - read_bytes);
+        if (bitmap32 == NULL) {
+            roaring64_bitmap_free(r);
+            return false;
+        }
+        buf += bitmap32_size;
+        read_bytes += bitmap32_size;
+
+        // While we don't attempt to validate much, we must ensure that there
+        // is no duplication in the high 48 bits - inserting into the ART
+        // assumes (or UB) no duplicate keys. The top 32 bits must be unique
+        // because we check for strict increasing values of  high32, but we
+        // must also ensure the top 16 bits within each 32-bit bitmap are also
+        // at least unique (we ensure they're strictly increasing as well,
+        // which they must be for a _valid_ bitmap, since it's cheaper to check)
+        int32_t last_bitmap_key = -1;
+        for (int i = 0; i < bitmap32->high_low_container.size; i++) {
+            uint16_t key = bitmap32->high_low_container.keys[i];
+            if (key <= last_bitmap_key) {
+                roaring_bitmap_free(bitmap32);
+                roaring64_bitmap_free(r);
+                return false;
+            }
+            last_bitmap_key = key;
+        }
+
+        // Insert all containers of the 32-bit bitmap into the 64-bit bitmap.
+        move_from_roaring32_offset(r, bitmap32, high32);
+        roaring_bitmap_free(bitmap32);
+    }
+    return true;
 }
 
 /**

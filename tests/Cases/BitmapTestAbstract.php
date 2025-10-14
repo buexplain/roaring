@@ -30,6 +30,39 @@ abstract class BitmapTestAbstract extends TestCase
 
     abstract function intMax(): int;
 
+    protected static function getMillisecond(): int
+    {
+        return (int)(microtime(true) * 1000);
+    }
+
+    /**
+     * composer test -- --filter=testStress
+     * @return void
+     */
+//    public function testStress()
+//    {
+//        ini_set("memory_limit", "1024M");
+//        $bytes = [];
+//        for ($i = 1; $i < 9000; $i++) {
+//            $x = [];
+//            for ($j = 0; $j < 10000; $j++) {
+//                $x[] = $j * $i;
+//            }
+//            $b = $this->newBp();
+//            $b->addMany($x);
+//            $bytes[] = $b->toBytes();
+////            $bytes[] = $b;
+//        }
+//        $t = self::getMillisecond();
+//        $b = $this->newBp();
+//        foreach ($bytes as $byte) {
+//            $b->orInPlace($byte);
+//        }
+//        var_dump($b->getCardinality());
+//        var_dump(self::getMillisecond() - $t);
+//        exit;
+//    }
+
     /**
      * composer test -- --filter=testSerialize
      * @return void
