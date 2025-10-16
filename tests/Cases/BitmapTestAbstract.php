@@ -135,7 +135,14 @@ abstract class BitmapTestAbstract extends TestCase
     public function testClear()
     {
         $b = $this->newBp();
-        $b->add(1);
+        $max = (int)($this->intMax() / ($this->bit() == 32 ? 100 : 10000000));
+        for ($i = 0; $i < 10; $i++) {
+            $start = $i * $max;
+            $end = $start + 65535;
+            $b->addRange($start, $end);
+        }
+        $this->assertEquals($end - 1, $b->maximum());
+        $this->assertEquals(65535 * 10, $b->getCardinality());
         $b->clear();
         $this->assertEquals(0, $b->getCardinality());
     }
