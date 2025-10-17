@@ -10,9 +10,9 @@ $arch = getArchitecture();
 $ext = $os === 'windows' ? 'dll' : 'so';
 $library = "$srcDir/CRoaring/shared/library-$os-$arch.$ext";
 if (PHP_OS_FAMILY === 'Windows') {
-    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
+    shell_exec("gcc -O3 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
 } else if (PHP_OS_FAMILY === 'Linux') {
-    shell_exec("gcc -O2 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
+    shell_exec("gcc -O3 -g0 -s -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
 } else if (PHP_OS_FAMILY === 'Darwin') {
     shell_exec("gcc -O2 -g0 -fPIC -shared -o $library $srcDir/CRoaring/src/library.c");
 }

@@ -83,7 +83,7 @@ class Bitmap
         } else {
             $bitmap = self::tryBase64Decode($bitmap);
             $bPtr = $this->library->create();
-            $this->portableDeserialize($bPtr, $bitmap);
+            $this->portableDeserialize($bPtr, $bitmap, true);
             $this->bitmap = $bPtr;
         }
     }
@@ -116,7 +116,7 @@ class Bitmap
         return $this->temporaryBitmap;
     }
 
-    protected function portableDeserialize(CData $bPtr, string $bitmap)
+    protected function portableDeserialize(CData $bPtr, string $bitmap, bool $free)
     {
         $length = strlen($bitmap);
         $buf = $this->getTemporaryBuff($length);
@@ -125,7 +125,9 @@ class Bitmap
         $ptr = FFI::addr($buf[0]);
         $ok = $this->library->portable_deserialize($bPtr, $ptr, $length);
         if (!$ok) {
-            $this->library->free($bPtr);
+            if ($free) {
+                $this->library->free($bPtr);
+            }
             throw new RuntimeException("bitmap portable_deserialize failed");
         }
     }
@@ -216,7 +218,7 @@ class Bitmap
         if (isset($data['bitmapBytes'])) {
             $data['bitmapBytes'] = base64_decode($data['bitmapBytes']);
             $bPtr = $this->library->create();
-            $this->portableDeserialize($bPtr, $data['bitmapBytes']);
+            $this->portableDeserialize($bPtr, $data['bitmapBytes'], true);
             $this->bitmap = $bPtr;
         }
     }
@@ -487,7 +489,7 @@ class Bitmap
                 return false;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->equals($this->bitmap, $bPtr);
     }
@@ -509,7 +511,7 @@ class Bitmap
                 return false;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->intersect($this->bitmap, $bPtr);
     }
@@ -540,7 +542,7 @@ class Bitmap
                 return clone $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $ptr = $this->library->or($this->bitmap, $bPtr);
         if (is_null($ptr)) {
@@ -582,7 +584,7 @@ class Bitmap
                 return $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $this->library->or_inplace($this->bitmap, $bPtr);
         return $this;
@@ -618,7 +620,7 @@ class Bitmap
                 return $this->getCardinality();
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->or_cardinality($this->bitmap, $bPtr);
     }
@@ -640,7 +642,7 @@ class Bitmap
                 return clone $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $ptr = $this->library->xor($this->bitmap, $bPtr);
         if (is_null($ptr)) {
@@ -668,7 +670,7 @@ class Bitmap
                 return $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $this->library->xor_inplace($this->bitmap, $bPtr);
         return $this;
@@ -691,7 +693,7 @@ class Bitmap
                 return $this->getCardinality();
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->xor_cardinality($this->bitmap, $bPtr);
     }
@@ -713,7 +715,7 @@ class Bitmap
                 return new self(null, $this->bit);
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $ptr = $this->library->and($this->bitmap, $bPtr);
         if (is_null($ptr)) {
@@ -775,7 +777,7 @@ class Bitmap
                 return $this->clear();
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $this->library->and_inplace($this->bitmap, $bPtr);
         return $this;
@@ -832,7 +834,7 @@ class Bitmap
                 return 0;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->and_cardinality($this->bitmap, $bPtr);
     }
@@ -854,7 +856,7 @@ class Bitmap
                 return clone $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $ptr = $this->library->andnot($this->bitmap, $bPtr);
         if (is_null($ptr)) {
@@ -918,7 +920,7 @@ class Bitmap
                 return $this;
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         $this->library->andnot_inplace($this->bitmap, $bPtr);
         return $this;
@@ -977,7 +979,7 @@ class Bitmap
                 return $this->getCardinality();
             }
             $bPtr = $this->getTemporaryBitmap();
-            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap));
+            $this->portableDeserialize($bPtr, self::tryBase64Decode($bitmap), false);
         }
         return $this->library->andnot_cardinality($this->bitmap, $bPtr);
     }

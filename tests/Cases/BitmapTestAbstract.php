@@ -19,8 +19,10 @@ declare(strict_types=1);
 
 namespace RoaringTest\Cases;
 
+use FFI;
 use PHPUnit\Framework\TestCase;
 use Roaring\Bitmap;
+use Roaring\Library;
 
 abstract class BitmapTestAbstract extends TestCase
 {
@@ -39,29 +41,44 @@ abstract class BitmapTestAbstract extends TestCase
      * composer test -- --filter=testStress
      * @return void
      */
-//    public function testStress()
-//    {
-//        ini_set("memory_limit", "1024M");
-//        $bytes = [];
-//        for ($i = 1; $i < 9000; $i++) {
-//            $x = [];
-//            for ($j = 0; $j < 10000; $j++) {
-//                $x[] = $j * $i;
-//            }
-//            $b = $this->newBp();
-//            $b->addMany($x);
-//            $bytes[] = $b->toBytes();
-////            $bytes[] = $b;
-//        }
-//        $t = self::getMillisecond();
-//        $b = $this->newBp();
+    public function abtestStress()
+    {
+        ini_set("memory_limit", "1024M");
+        $bytes = [];
+        for ($i = 1; $i < 9000; $i++) {
+            $x = [];
+            for ($j = 0; $j < 10000; $j++) {
+                $x[] = $j * $i;
+            }
+            $b = $this->newBp();
+            $b->addMany($x);
+            $bytes[] = $b->toBytes();
+//            $bytes[] = $b;
+        }
+        $t = self::getMillisecond();
+//        $lib = Library::getInstance(32);
+//        $bPtr = $lib->create();
 //        foreach ($bytes as $byte) {
-//            $b->orInPlace($byte);
+//            $length = strlen($byte);
+//            $buf = Library::getFFI()->new("char[" . ($length + 1) . "]");
+//            FFI::memcpy($buf, $byte, $length);
+//            $buf[$length] = "\0";
+//            $ptr = FFI::addr($buf[0]);
+//            $lib->clear($bPtr);
+//            $lib->portable_deserialize($bPtr, $ptr, $length);
 //        }
-//        var_dump($b->getCardinality());
 //        var_dump(self::getMillisecond() - $t);
 //        exit;
-//    }
+
+
+        $b = $this->newBp();
+        foreach ($bytes as $byte) {
+            $b->orInPlace($byte);
+        }
+        var_dump($b->getCardinality());
+        var_dump(self::getMillisecond() - $t);
+        exit;
+    }
 
     /**
      * composer test -- --filter=testSerialize

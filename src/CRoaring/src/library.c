@@ -789,7 +789,6 @@ bool bp32_portable_deserialize(void *r, char *buf, size_t maxbytes) {
     bool is_ok = ra_portable_deserialize(&ans->high_low_container, buf,
                                          maxbytes, &bytesread);
     if (!is_ok) {
-        roaring_free(ans);
         return false;
     }
     roaring_bitmap_set_copy_on_write(ans, false);
