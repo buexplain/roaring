@@ -433,6 +433,39 @@ abstract class BitmapTestAbstract extends TestCase
     }
 
     /**
+     * composer test -- --filter=testTemporaryBuffBitmap
+     * @return void
+     */
+    public function testTemporaryBuffBitmap()
+    {
+        $a = $this->newBp();
+        $b = $this->newBp();
+        //测试空字符串
+        $a->orInPlace($b->toBytes());
+        $this->assertEquals([], $a->toArray());
+        //测试比空bitmap更长的bytes
+        $b->addRange(100, 50000000);
+        $a->orInPlace($b->toBytes());
+        $this->assertEquals($a->getCardinality(), $b->getCardinality());
+        //测试比上一个测试更小的 bytes
+        $b->clear();
+        $a->clear();
+        $this->assertEquals(0, $b->getCardinality());
+        $this->assertEquals(0, $a->getCardinality());
+        $b->addRange(1, 100);
+        $a->orInPlace($b->toBytes());
+        $this->assertEquals($a->getCardinality(), $b->getCardinality());
+        //测试比上上个测试更大的bytes
+        $b->clear();
+        $a->clear();
+        $this->assertEquals(0, $b->getCardinality());
+        $this->assertEquals(0, $a->getCardinality());
+        $b->addRange(100000000, 1000000000);
+        $a->orInPlace($b->toBytes());
+        $this->assertEquals($a->getCardinality(), $b->getCardinality());
+    }
+
+    /**
      * composer test -- --filter=testOrMany
      * @return void
      */
