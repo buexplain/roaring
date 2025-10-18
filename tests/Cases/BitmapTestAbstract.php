@@ -445,7 +445,8 @@ abstract class BitmapTestAbstract extends TestCase
         $this->assertEquals([], $a->toArray());
         //测试比空bitmap更长的bytes
         $b->addRange(100, 50000000);
-        $a->orInPlace($b->toBytes());
+        $bytes1 = $b->toBytes();
+        $a->orInPlace($bytes1);
         $this->assertEquals($a->getCardinality(), $b->getCardinality());
         //测试比上一个测试更小的 bytes
         $b->clear();
@@ -453,7 +454,8 @@ abstract class BitmapTestAbstract extends TestCase
         $this->assertEquals(0, $b->getCardinality());
         $this->assertEquals(0, $a->getCardinality());
         $b->addRange(1, 100);
-        $a->orInPlace($b->toBytes());
+        $bytes2 = $b->toBytes();
+        $a->orInPlace($bytes2);
         $this->assertEquals($a->getCardinality(), $b->getCardinality());
         //测试比上上个测试更大的bytes
         $b->clear();
@@ -461,8 +463,10 @@ abstract class BitmapTestAbstract extends TestCase
         $this->assertEquals(0, $b->getCardinality());
         $this->assertEquals(0, $a->getCardinality());
         $b->addRange(100000000, 1000000000);
-        $a->orInPlace($b->toBytes());
+        $bytes3 = $b->toBytes();
+        $a->orInPlace($bytes3);
         $this->assertEquals($a->getCardinality(), $b->getCardinality());
+        $this->assertTrue(strlen($bytes1) > strlen($bytes2) && strlen($bytes1) < strlen($bytes3));
     }
 
     /**
