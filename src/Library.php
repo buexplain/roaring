@@ -74,7 +74,7 @@ use function strlen;
  *
  * @method static int   portable_size_in_bytes(CData $r)                 获取序列化位图所需的字节数。
  * @method static int   portable_serialize(CData $r, CData $buf)         将位图序列化到缓冲区，返回写入的字节数。
- * @method static CData portable_deserialize(CData $r, CData $buf, int $maxbytes)                 从缓冲区反序列化位图，失败时返回 false。
+ * @method static bool portable_deserialize(CData $r, CData $buf, int $maxbytes)                 从缓冲区反序列化位图，失败时返回 false。
  * @method static void  to_uint_array(CData $r, CData $ans)            将位图中所有元素导出为有序数组。
  */
 class Library
