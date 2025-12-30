@@ -229,6 +229,9 @@ class Bitmap
      */
     final public function __clone()
     {
+        // clone务必彻底，否则会引起bitmap对象重复free问题
+        $this->temporaryBitmap = null;
+        $this->temporaryBuff = null;
         $this->bitmap = $this->library->copy($this->bitmap);
     }
 

@@ -120,8 +120,15 @@ abstract class BitmapTestAbstract extends TestCase
     public function testClone()
     {
         $b = $this->newBp();
+        $b->add(1, 20, 300, 4000, 50000, 600000);
         $b2 = clone $b;
-        $this->assertEquals(serialize($b), serialize($b2));
+        $this->assertTrue($b->equals($b2));
+        $this->assertTrue($b->equals($b2->toBase64()));
+        $b3 = clone $b;
+        $this->assertTrue($b->equals($b3));
+        $this->assertTrue($b->equals($b3->toBase64()));
+        $this->assertTrue($b->equals($b3->toBytes()));
+        $this->assertEquals(serialize($b), serialize($b3));
     }
 
     /**
