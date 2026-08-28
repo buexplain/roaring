@@ -145,6 +145,9 @@ class Library
             throw new RuntimeException("Library not found: $library");
         }
         $header = file_get_contents(__DIR__ . '/CRoaring/shared/library.h');
+        if(!is_null(self::$ffi)) {
+            return self::$ffi;
+        }
         self::$ffi = FFI::cdef($header, $library);
         return self::$ffi;
     }
